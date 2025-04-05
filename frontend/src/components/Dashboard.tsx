@@ -1,121 +1,81 @@
-import { useState, useEffect } from 'react';
-import { Upload } from 'lucide-react';
+import { useState } from 'react';
+import { Plus, List } from 'lucide-react';
 import CampaignList from './CampaignList';
+import CreateCampaign from './CreateCampaign';
 import { Campaign } from '../types';
+import CampaignReport from './CampaignReport';
 
 function Dashboard() {
+  const [showCreateCampaign, setShowCreateCampaign] = useState(false);
+  const [showReports, setShowReports] = useState(false);
   const [campaigns, setCampaigns] = useState<Campaign[]>(() => {
     const saved = localStorage.getItem('campaigns');
     return saved ? JSON.parse(saved) : [];
   });
 
-  const [csvContent, setCsvContent] = useState<string>(() => {
-    return localStorage.getItem('csvFile') || ''; // Load stored CSV content if available
-  });
+  const handleCreateCampaign = (campaign: Campaign) => {
+    const updatedCampaigns = [...campaigns, campaign];
+    setCampaigns(updatedCampaigns);
+    localStorage.setItem('campaigns', JSON.stringify(updatedCampaigns));
+    setShowCreateCampaign(false);
+  };  
 
-  // Save campaigns to localStorage whenever they change
-  useEffect(() => {
-    localStorage.setItem('campaigns', JSON.stringify(campaigns));
-  }, [campaigns]);
+  if (showCreateCampaign) {
+    return <CreateCampaign onSave={handleCreateCampaign} onCancel={() => setShowCreateCampaign(false)} />;
+  }
 
-  // Save CSV content to localStorage when it changes
-  useEffect(() => {
-    if (csvContent) {
-      localStorage.setItem('csvFile', csvContent);
-    }
-  }, [csvContent]);
-
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const text = e.target?.result as string;
-        
-        // Save CSV file content to localStorage
-        setCsvContent(text);
-        localStorage.setItem('csvFile', text);
-
-        // Parse CSV and create a campaign
-        const rows = text
-          .split('\n')
-          .map(row => row.trim())
-          .filter(row => row)
-          .map(row => row.split(','));
-
-        if (rows.length > 1 && rows[1].length > 0) {
-          const newCampaign: Campaign = {
-            id: Date.now().toString(),
-            name: file.name.replace('.csv', ''),
-            totalMessages: rows.length - 1,
-            sentMessages: 0,
-            status: 'pending',
-            scheduledDate: rows[1][0] || '', // Ensure the first column exists
-            createdAt: new Date().toISOString(),
-          };
-          setCampaigns(prev => [...prev, newCampaign]);
-        }
-      };
-      reader.readAsText(file);
-    }
-  };
-
-  const simulateSendMessages = (campaignId: string) => {
-    const interval = setInterval(() => {
-      setCampaigns(prev =>
-        prev.map(campaign => {
-          if (campaign.id === campaignId && campaign.sentMessages < campaign.totalMessages) {
-            const newSentMessages = campaign.sentMessages + 1;
-            return {
-              ...campaign,
-              sentMessages: newSentMessages,
-              status: newSentMessages === campaign.totalMessages ? 'completed' : 'sending'
-            };
-          }
-          return campaign;
-        })
-      );
-    }, 100);
-
-    // Cleanup interval after completion
-    setTimeout(() => clearInterval(interval), 10000);
-  };
-
+  if (showReports) {
+    return (
+      <CampaignReport 
+        campaigns={campaigns} 
+        onBack={() => setShowReports(false)}
+      />
+    );
+  }
+    
   return (
     <div className="space-y-8">
-      <div className="bg-white rounded-xl shadow-md p-6">
-        <h2 className="text-xl font-semibold mb-4">Upload New Campaign</h2>
-        <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
-          <div className="text-center">
-            <Upload className="mx-auto h-12 w-12 text-gray-400" />
-            <div className="mt-4">
-              <label htmlFor="file-upload" className="cursor-pointer bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">
-                Choose CSV File
-              </label>
-              <input
-                id="file-upload"
-                type="file"
-                accept=".csv"
-                className="hidden"
-                onChange={handleFileUpload}
-              />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div 
+          onClick={() => setShowCreateCampaign(true)}
+          className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl p-8 cursor-pointer transform transition-all hover:scale-105 hover:bg-whatsapp-light border border-white/20"
+        >
+          <div className="flex flex-col items-center justify-center h-full space-y-4">
+            <div className="bg-whatsapp-primary/10 p-4 rounded-full">
+              <Plus className="h-8 w-8 text-whatsapp-primary" />
             </div>
-            <p className="mt-2 text-sm text-gray-500">CSV format: Date, Phone Number, Message</p>
+            <h2 className="text-xl font-semibold text-whatsapp-dark">Create Campaign</h2>
+            <p className="text-gray-600 text-center">
+              Start a new campaign by adding contacts and messages
+            </p>
+          </div>
+        </div>
+
+        <div 
+          onClick={() => {
+            const stored = localStorage.getItem('campaigns');
+            const parsed = stored ? JSON.parse(stored) : [];
+            setCampaigns(parsed); // Optional: keep dashboard in sync
+            setShowReports(true);
+          }}          
+          className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl p-8 cursor-pointer transform transition-all hover:scale-105 hover:bg-whatsapp-light border border-white/20"
+        >
+          <div className="flex flex-col items-center justify-center h-full space-y-4">
+            <div className="bg-whatsapp-primary/10 p-4 rounded-full">
+              <List className="h-8 w-8 text-whatsapp-primary" />
+            </div>
+            <h2 className="text-xl font-semibold text-whatsapp-dark">Campaign Reports</h2>
+            <p className="text-gray-600 text-center">
+              View and manage your existing campaigns
+            </p>
           </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-md p-6">
-        <h2 className="text-xl font-semibold mb-4">Your Campaigns</h2>
-        <CampaignList campaigns={campaigns} onStart={simulateSendMessages} />
+      <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl p-6 border border-white/20">
+        <h2 className="text-xl font-semibold mb-4 text-whatsapp-dark">Your Campaigns</h2>
+        <CampaignList campaigns={campaigns}/>
       </div>
-
-      {csvContent && (
-        <div className="bg-white rounded-xl shadow-md p-6">
-          <h2 className="text-xl font-semibold mb-4">Stored CSV Content</h2>
-          <pre className="bg-gray-100 p-4 rounded-md text-sm text-gray-700 overflow-auto max-h-40">{csvContent}</pre>
-        </div>
-      )}
     </div>
   );
 }

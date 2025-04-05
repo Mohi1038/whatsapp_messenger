@@ -15,6 +15,9 @@ const sendMessage = async (contacts) => {
 
     await new Promise(resolve => setTimeout(resolve, 10000));
 
+    let successList = [];
+    let failedList = [];
+
     for (let contact of contacts) {
         const whatsappURL = `https://web.whatsapp.com/send?phone=${contact.number}&text=${encodeURIComponent(contact.message)}`;
         await page.goto(whatsappURL);
@@ -26,27 +29,44 @@ const sendMessage = async (contacts) => {
             if (!inputBox) throw new Error("Message input box not found");
 
             await inputBox.click();
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            await new Promise(resolve => setTimeout(resolve, 3000));
 
-            const sendButton = await page.waitForSelector("span[data-icon='send']", { timeout: 5000 });
+            const sendButton = await page.waitForSelector("span[data-icon='send']", { timeout: 2000 });
             if (sendButton) {
                 await sendButton.click();
-                console.log(`✅ Message sent to ${contact.number}`);
+                console.log(`📤 Sending message to ${contact.number}...`);
             } else {
                 throw new Error("Send button not found");
             }
+
+            // Wait for the message to appear in the chat
+            const messageSent = await page.waitForFunction(() => {
+                let messages = document.querySelectorAll("div.message-out"); // Sent messages
+                return messages.length > 0 && messages[messages.length - 1].innerText.trim().length > 0;
+            }, { timeout: 7000 }).catch(() => false);
+
+            if (messageSent) {
+                console.log(`✅ Message successfully sent to ${contact.number}`);
+                successList.push({ number: contact.number });
+            } else {
+                throw new Error("Message stuck in buffer");
+            }
+
         } catch (error) {
             console.error(`❌ Failed to send message to ${contact.number}`);
-            console.error(error);
+            failedList.push({ number: contact.number });
         }
 
         await new Promise(resolve => setTimeout(resolve, 5000));
     }
 
-    console.log("✅ All messages sent!");
+    console.log("✅ Messaging process completed!");
+
     setTimeout(() => {
         browser.close();
     }, 5000);
+
+    return { sent: successList, failed: failedList };
 };
 
 module.exports = { sendMessage };
