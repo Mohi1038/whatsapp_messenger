@@ -1,6 +1,9 @@
 -- Just a sample database schema for the Messaging application
 -- This is a simple schema with 3 tables: User_info, Campaign, and customer
 -- Made just for someone who wants to contribute in future and needs a database schema to start with
+-- This data base is not in use now, but it can be used in future
+-- This is a MySQL database schema
+-- You can run this script in your MySQL database to create the tables
 
 CREATE DATABASE Messaging;
 USE Messaging;

@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { MessageCircle } from 'lucide-react';
+import { Routes, Route } from 'react-router-dom';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
+import EditCampaignForm from './components/EditCampaignForm';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -39,7 +41,16 @@ function App() {
       </nav>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {isAuthenticated ? <Dashboard /> : <Login onLogin={handleLogin} />}
+        <Routes>
+          {!isAuthenticated ? (
+            <Route path="*" element={<Login onLogin={handleLogin} />} />
+            ) : (
+            <>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/navigate" element={<EditCampaignForm />} />
+            </>
+          )}
+        </Routes>
       </main>
     </div>
   );

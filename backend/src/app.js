@@ -1,3 +1,6 @@
+// File: backend/src/app.js
+// Description: This file sets up the Express application and imports the necessary routes.
+
 const express = require("express");
 const dbRoutes = require("./routes/dbRoute");
 const whatsappRoutes = require("./routes/whatsappRoutes");

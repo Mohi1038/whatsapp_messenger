@@ -11,7 +11,7 @@ const sendMessage = async (contacts) => {
     await page.goto("https://web.whatsapp.com");
 
     await page.waitForSelector("#side", { timeout: 60000 });
-    console.log("✅ WhatsApp Web Loaded.");
+    console.log(" WhatsApp Web Loaded.");
 
     await new Promise(resolve => setTimeout(resolve, 10000));
 
@@ -46,21 +46,21 @@ const sendMessage = async (contacts) => {
             }, { timeout: 7000 }).catch(() => false);
 
             if (messageSent) {
-                console.log(`✅ Message successfully sent to ${contact.number}`);
+                console.log(` Message successfully sent to ${contact.number}`);
                 successList.push({ number: contact.number });
             } else {
                 throw new Error("Message stuck in buffer");
             }
 
         } catch (error) {
-            console.error(`❌ Failed to send message to ${contact.number}`);
+            console.error(` Failed to send message to ${contact.number}`);
             failedList.push({ number: contact.number });
         }
 
         await new Promise(resolve => setTimeout(resolve, 5000));
     }
 
-    console.log("✅ Messaging process completed!");
+    console.log(" Messaging process completed!");
 
     setTimeout(() => {
         browser.close();

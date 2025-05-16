@@ -1,4 +1,4 @@
-import { Calendar, Send, CheckCircle, XCircle, Users, Loader } from 'lucide-react';
+import { Calendar, Send, CheckCircle, XCircle, Users, Loader, Pencil } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Campaign, Contact } from '../types';
 
@@ -174,6 +174,14 @@ function CampaignList({ campaigns }: CampaignListProps) {
                   Failed
                 </div>
               )}
+
+              <button
+                onClick={() => window.location.href = `/navigate?id=${campaign.id}`}
+                className="p-2 hover:bg-gray-100 rounded-full"
+                title="Edit Campaign"
+                >
+                <Pencil className="h-4 w-4 text-gray-500" />
+              </button>
             </div>
           </div>
         </div>
