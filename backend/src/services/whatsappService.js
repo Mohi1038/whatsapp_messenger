@@ -2,6 +2,8 @@ const puppeteer = require("puppeteer");
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
+const isProduction = process.env.NODE_ENV === 'production';
+
 const sendMessage = async (contacts) => {
     // Validate contacts input
     if (!contacts || !Array.isArray(contacts)) {
@@ -11,20 +13,15 @@ const sendMessage = async (contacts) => {
     const browser = await puppeteer.launch({
         headless: true,
         args: [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--single-process'
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage'
         ],
-        // Try these common Chrome paths in order
-        executablePath: [
-            '/usr/bin/google-chrome',
-            '/usr/bin/chromium-browser',  
-            puppeteer.executablePath()     
-        ].find(path => require('fs').existsSync(path)),
-        userDataDir: "./whatsapp-session",
-        defaultViewport: null
-    });
+        executablePath: isProduction 
+          ? '/opt/render/.cache/puppeteer/chrome/linux-*/chrome-linux/chrome' 
+          : puppeteer.executablePath(), 
+        userDataDir: "./whatsapp-session"
+      });
 
     const page = await browser.newPage();
 
