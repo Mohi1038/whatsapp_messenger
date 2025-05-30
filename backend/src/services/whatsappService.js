@@ -1,7 +1,10 @@
 const puppeteer = require("puppeteer");
+const path = require('path');
+const fs = require('fs');
 
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
+// Detect production environment
 const isProduction = process.env.NODE_ENV === 'production';
 
 const sendMessage = async (contacts) => {
@@ -10,32 +13,46 @@ const sendMessage = async (contacts) => {
         throw new Error("Invalid contacts format. Must be an array.");
     }
 
+    const sessionDir = path.join(__dirname, '../whatsapp-session');
+    
+    // Ensure session directory exists
+    if (!fs.existsSync(sessionDir)) {
+        fs.mkdirSync(sessionDir, { recursive: true });
+    }
+
     const browser = await puppeteer.launch({
-        headless: true,
+        headless: isProduction, // Run headless in production
+        userDataDir: sessionDir,
         args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage'
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-accelerated-2d-canvas',
+            '--disable-gpu'
         ],
         executablePath: isProduction 
-          ? '/opt/render/.cache/puppeteer/chrome/linux-*/chrome-linux/chrome' 
-          : puppeteer.executablePath(), 
-        userDataDir: "./whatsapp-session"
-      });
+            ? process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium-browser'
+            : puppeteer.executablePath(),
+        defaultViewport: null,
+    });
 
     const page = await browser.newPage();
 
     console.log("Opening WhatsApp Web...");
     try {
         await page.goto("https://web.whatsapp.com", {
-            waitUntil: 'networkidle2',
-            timeout: 60000
+            waitUntil: 'domcontentloaded',
+            timeout: 0 // Disable timeout for initial load
         });
 
-        await page.waitForSelector("#side", { timeout: 60000 });
+        await page.waitForSelector("#side", { 
+            timeout: 120000, // 2 minutes timeout
+            visible: true 
+        });
         console.log("WhatsApp Web Loaded.");
     } catch (err) {
         console.error("Failed to load WhatsApp Web:", err.message);
+        await page.screenshot({ path: 'whatsapp-load-error.png' });
         await browser.close();
         return { 
             sent: [], 
@@ -46,12 +63,19 @@ const sendMessage = async (contacts) => {
         };
     }
 
-    await delay(10000);
+    await delay(10000); // Additional settling time
 
+    const results = await processContacts(page, contacts);
+    await browser.close();
+    
+    return results;
+};
+
+async function processContacts(page, contacts) {
     let successList = [];
     let failedList = [];
 
-    for (let contact of contacts) {
+    for (const contact of contacts) {
         if (!contact.number || !contact.message) {
             failedList.push({ 
                 number: contact.number || 'undefined', 
@@ -60,12 +84,12 @@ const sendMessage = async (contacts) => {
             continue;
         }
 
-        console.log(`\nProcessing contact: ${contact.number}`);
+        console.log(`Processing contact: ${contact.number}`);
 
         try {
             const whatsappURL = `https://web.whatsapp.com/send?phone=${contact.number}`;
             await page.goto(whatsappURL, {
-                waitUntil: 'networkidle2',
+                waitUntil: 'domcontentloaded',
                 timeout: 60000
             });
             
@@ -83,19 +107,12 @@ const sendMessage = async (contacts) => {
                 continue;
             }
 
-            // Wait for message input box
+            // Wait for message input
             await page.waitForSelector("footer div[contenteditable='true']", { 
                 visible: true, 
                 timeout: 40000 
             });
 
-            const inputBox = await page.$("footer div[contenteditable='true']");
-            if (!inputBox) throw new Error("Message input box not found");
-
-            await inputBox.focus();
-            await delay(500);
-
-            // Clear existing text if any
             await page.evaluate(() => {
                 const input = document.querySelector("footer div[contenteditable='true']");
                 if (input) input.innerHTML = "";
@@ -103,11 +120,10 @@ const sendMessage = async (contacts) => {
 
             await page.keyboard.type(contact.message);
             await delay(500);
-
             await page.keyboard.press("Enter");
             await delay(3000);
 
-            // Verify message was sent
+            // Verify message sent
             const messageSent = await page.evaluate(() => {
                 const messages = document.querySelectorAll("div.message-out");
                 return messages.length > 0 && 
@@ -115,10 +131,9 @@ const sendMessage = async (contacts) => {
             });
 
             if (messageSent) {
-                console.log(`Message successfully sent to ${contact.number}`);
                 successList.push({ number: contact.number });
             } else {
-                throw new Error("Message was typed but not sent (clock icon still visible)");
+                throw new Error("Message not confirmed as sent");
             }
 
         } catch (error) {
@@ -127,25 +142,14 @@ const sendMessage = async (contacts) => {
                 number: contact.number, 
                 error: error.message 
             });
-            
-            // Take screenshot for debugging
-            await page.screenshot({ 
-                path: `error_${Date.now()}.png`,
-                fullPage: true 
-            });
+            await page.screenshot({ path: `error_${contact.number}.png` });
         }
 
-        await delay(5000);
+        await delay(5000); 
     }
 
-    console.log("\nMessaging process completed!");
-    console.log(`Sent: ${successList.length}, Failed: ${failedList.length}`);
-
-    await browser.close();
-    return { 
-        sent: successList, 
-        failed: failedList 
-    };
-};
+    console.log(`Completed: ${successList.length} sent, ${failedList.length} failed`);
+    return { sent: successList, failed: failedList };
+}
 
 module.exports = { sendMessage };

@@ -4,8 +4,9 @@
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
-    "build": "mkdir -p .cache/puppeteer && npm install",
-    "postinstall": "node -e \"require('puppeteer').launch({headless: true}).then(b => b.close())\""
+    "postinstall": "node create-session-dir.js && npm run install-puppeteer",
+    "clean": "rimraf whatsapp-session .cache",
+    "install-puppeteer": "node node_modules/puppeteer/install.mjs"
   },
   "keywords": [],
   "author": "",
@@ -18,6 +19,11 @@
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "mysql2": "^3.12.0",
-    "puppeteer": "^24.3.1"
+    "puppeteer": "^24.3.1",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2"
+  },
+  "devDependencies": {
+    "rimraf": "^6.0.1"
   }
 }

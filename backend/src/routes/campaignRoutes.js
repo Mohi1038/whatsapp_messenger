@@ -38,7 +38,7 @@ router.post("/start-campaign", async (req, res) => {
     }
 
     try {
-        const response = await axios.post("https://backend-4m2m.onrender.com/api/whatsapp/send", {
+        const response = await axios.post("http://localhost:5000/api/whatsapp/send", {
             contacts: formattedContacts
         });
 
@@ -68,3 +68,4 @@ router.post("/start-campaign", async (req, res) => {
 });
 
 module.exports = router;
+
