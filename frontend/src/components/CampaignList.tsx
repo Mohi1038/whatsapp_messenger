@@ -58,7 +58,7 @@ function CampaignList({ campaigns }: CampaignListProps) {
     setCampaignStatus((prev) => ({ ...prev, [id]: { status: 'sending' } }));
 
     try {
-      const response = await fetch('http://localhost:5000/api/campaign/start-campaign', {
+      const response = await fetch('https://backend-lazx.onrender.com/api/campaign/start-campaign', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(campaignToSend),
