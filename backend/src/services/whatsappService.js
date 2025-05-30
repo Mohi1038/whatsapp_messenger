@@ -1,4 +1,5 @@
-const puppeteer = require("puppeteer");
+const puppeteer = require('puppeteer-core');
+const chromium = require('@sparticuz/chromium'); 
 const path = require('path');
 const fs = require('fs');
 
@@ -21,20 +22,21 @@ const sendMessage = async (contacts) => {
     }
 
     const browser = await puppeteer.launch({
-        headless: isProduction, // Run headless in production
+        headless: isProduction ? 'new' : false,
         userDataDir: sessionDir,
         args: [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-accelerated-2d-canvas',
-            '--disable-gpu'
+          ...chromium.args,
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-accelerated-2d-canvas',
+          '--disable-gpu'
         ],
-        executablePath: isProduction 
-            ? process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium-browser'
-            : puppeteer.executablePath(),
+        executablePath: isProduction
+          ? await chromium.executablePath()
+          : puppeteer.executablePath(),
         defaultViewport: null,
-    });
+      });
 
     const page = await browser.newPage();
 
